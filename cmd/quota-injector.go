@@ -44,8 +44,8 @@ var (
 	useEphemeralStorage bool
 	// enableLabelSelect is the flag to enable label select
 	enableLabelSelect bool
-	// filterLLabelSelect is the label select map
-	filterLLabelSelect = make(utils.FlagMap)
+	// filterLabelSelect is the label select map
+	filterLabelSelect = make(utils.FlagMap)
 )
 
 // our injector plugin
@@ -60,11 +60,11 @@ type plugin struct {
 func (p *plugin) PostCreateContainer(ctx context.Context, pod *api.PodSandbox, ctr *api.Container) error {
 	klog.Infof("PostCreateContainer pod id: %s, container name: %s", pod.Id, ctr.Name)
 	if enableLabelSelect {
-		if filterLLabelSelect == nil {
+		if filterLabelSelect == nil {
 			klog.Warningf("label select map is nil")
 		}
-		if filterLLabelSelect != nil && !utils.FilterPodByLabelSelect(pod, filterLLabelSelect) {
-			klog.V(4).InfoS("pod %s/%s not match label select map %v", pod.Namespace, pod.Name, filterLLabelSelect)
+		if filterLabelSelect != nil && !utils.FilterPodByLabelSelect(pod, filterLabelSelect) {
+			klog.InfoS("pod %s/%s not match label select map %v", pod.Namespace, pod.Name, filterLabelSelect)
 			return nil
 		}
 	}
@@ -104,15 +104,15 @@ func (p *plugin) PostCreateContainer(ctx context.Context, pod *api.PodSandbox, c
 func (p *plugin) PostStartContainer(ctx context.Context, pod *api.PodSandbox, ctr *api.Container) error {
 	klog.Infof("PostStartContainer pod id: %s, container name: %s", pod.Id, ctr.Name)
 	if enableLabelSelect {
-		if filterLLabelSelect == nil {
+		if filterLabelSelect == nil {
 			klog.Warningf("label select map is nil")
 		}
-		if filterLLabelSelect != nil && !utils.FilterPodByLabelSelect(pod, filterLLabelSelect) {
-			klog.V(4).InfoS("pod %s/%s not match label select map %v", pod.Namespace, pod.Name, filterLLabelSelect)
+		if filterLabelSelect != nil && !utils.FilterPodByLabelSelect(pod, filterLabelSelect) {
+			klog.InfoS("pod %s/%s not match label select map %v", pod.Namespace, pod.Name, filterLabelSelect)
 			return nil
 		}
 	}
-	rootfs := filepath.Join(containerdBasePath, containerdStateDir, "io.containerd.runtime.v2.task", containerdNamespace, ctr.Id, "rootfs")
+	rootfs := filepath.Join(containerdStateDir, "io.containerd.runtime.v2.task", containerdNamespace, ctr.Id, "rootfs")
 	var size = quotaSize
 	if useEphemeralStorage {
 		ephemeralStorage, err := utils.GetEphemeralStorage(ctx, pod, ctr)
@@ -147,11 +147,11 @@ func (p *plugin) PostStartContainer(ctx context.Context, pod *api.PodSandbox, ct
 func (p *plugin) RemoveContainer(ctx context.Context, pod *api.PodSandbox, ctr *api.Container) error {
 	klog.Infof("RemoveContainer pod id: %s, container name: %s", pod.Id, ctr.Name)
 	if enableLabelSelect {
-		if filterLLabelSelect == nil {
+		if filterLabelSelect == nil {
 			klog.Warningf("label select map is nil")
 		}
-		if filterLLabelSelect != nil && !utils.FilterPodByLabelSelect(pod, filterLLabelSelect) {
-			klog.V(4).InfoS("pod %s/%s not match label select map %v", pod.Namespace, pod.Name, filterLLabelSelect)
+		if filterLabelSelect != nil && !utils.FilterPodByLabelSelect(pod, filterLabelSelect) {
+			klog.InfoS("pod %s/%s not match label select map %v", pod.Namespace, pod.Name, filterLabelSelect)
 			return nil
 		}
 	}
@@ -190,9 +190,22 @@ func parseFlag() {
 	flag.StringVar(&containerdNamespace, "containerd-namespace", constant.DefaultContainerdNamespace, "containerd namespace")
 	flag.BoolVar(&useEphemeralStorage, "use-ephemeral-storage", false, "use pod resource ephemeral-storage to set quota size")
 	flag.BoolVar(&enableLabelSelect, "enable-label-select", true, "enable label select")
-	flag.Var(&filterLLabelSelect, "label-select", "label select map, key=value,key1=value1")
+	flag.Var(&filterLabelSelect, "label-select", "label select map, key=value,key1=value1")
 	flag.Parse()
-	flag.PrintDefaults()
+}
+
+func printFlag() {
+	klog.InfoS("plugin name", "name", pluginName)
+	klog.InfoS("plugin index", "index", pluginIdx)
+	klog.InfoS("quota size", "size", quotaSize)
+	klog.InfoS("containerd state dir", "state-dir", containerdStateDir)
+	klog.InfoS("containerd root dir", "root-dir", containerdRootDir)
+	klog.InfoS("containerd base path", "base-path", containerdBasePath)
+	klog.InfoS("containerd socket", "socket", containerdSocket)
+	klog.InfoS("containerd namespace", "namespace", containerdNamespace)
+	klog.InfoS("use ephemeral storage", "use-ephemeral-storage", useEphemeralStorage)
+	klog.InfoS("enable label select", "enable-label-select", enableLabelSelect)
+	klog.InfoS("label select map", "label-select", filterLabelSelect)
 }
 
 func main() {
@@ -207,6 +220,7 @@ func main() {
 	defer logs.FlushLogs()
 
 	parseFlag()
+	printFlag()
 
 	opts = append(opts, stub.WithPluginName(pluginName))
 	opts = append(opts, stub.WithPluginIdx(pluginIdx))
