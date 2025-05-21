@@ -1,0 +1,81 @@
+# Default values for maskgpu.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  registry: release-ci.daocloud.io
+  repository: zestu/snapshots-quota
+  # This sets the pull policy for images.
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+# This is for the secretes for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: [ ]
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: ""
+
+
+# This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+podAnnotations: { }
+# This is for setting Kubernetes Labels to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels: { }
+
+podSecurityContext: { }
+# fsGroup: 2000
+
+securityContext: { }
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+# runAsNonRoot: true
+# runAsUser: 1000
+
+resources: { }
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+#   cpu: 100m
+#   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+initContainerImage:
+  registry: ghcr.io
+  repository: containers/nri-plugins/nri-config-manager
+  # If not defined Chart.AppVersion will be used
+  tag: v0.8.0
+  pullPolicy: IfNotPresent
+
+nri:
+  plugin:
+    index: "99"
+    name: snapshots-quota
+#    quota: 1073741824 #this is global quota
+#    containerd_base_path: / # this is the default value
+#    containerd_root_dir: /var/lib/containerd # this is the default value
+#    containerd_state_dir: /run/containerd # this is the default value
+#    containerd_socket: /run/containerd/containerd.sock # this is the default value
+#    containerd_namespace: k8s.io # this is the default value
+#    use_ephemeral_storage: false # use pod resource ephemeral-storage to set quota size
+#    enable_label_select: true # enable label select, only support match label pod
+#    label_select: "app=zestu"
+  runtime:
+    patchConfig: true
+  config:
+    pluginRegistrationTimeout: 5s
+    pluginRequestTimeout: 2s

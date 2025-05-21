@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "snapshots-quota.fullname" . }}
+  labels:
+    {{- include "snapshots-quota.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "snapshots-quota.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "snapshots-quota.labels" . | nindent 8 }}
+          {{- with .Values.podLabels }}
+          {{- toYaml . | nindent 8 }}
+          {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      nodeSelector:
+        kubernetes.io/os: "linux"
+      {{- with .Values.nodeSelector }}
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.nri.runtime.patchConfig }}
+      initContainers:
+        - name: patch-runtime
+          {{- if (not (or (eq .Values.nri.runtime.config nil) (eq .Values.nri.runtime.config.pluginRegistrationTimeout ""))) }}
+          args:
+            - -nri-plugin-registration-timeout
+            - {{ .Values.nri.runtime.config.pluginRegistrationTimeout }}
+            - -nri-plugin-request-timeout
+            - {{ .Values.nri.runtime.config.pluginRequestTimeout }}
+          {{- end }}
+          image: {{ .Values.initContainerImage.registry }}/{{ .Values.initContainerImage.repository }}:{{ .Values.initContainerImage.tag | default .Chart.AppVersion }}
+          imagePullPolicy: {{ .Values.initContainerImage.pullPolicy }}
+          volumeMounts:
+            - name: containerd-config
+              mountPath: /etc/containerd
+            - name: crio-config
+              mountPath: /etc/crio/crio.conf.d
+            - name: dbus-socket
+              mountPath: /var/run/dbus/system_bus_socket
+          securityContext:
+            privileged: true
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+          command:
+            - /bin/sh
+            - -c
+            - /app/quota-injector
+              {{- if .Values.nri.plugin.index }} --idx {{ .Values.nri.plugin.index }}{{- end }}
+              {{- if .Values.nri.plugin.name }} --name {{ .Values.nri.plugin.name }}{{- end }}
+              {{- if .Values.nri.plugin.quota }} --quota {{ .Values.nri.plugin.quota}}{{- end }}
+              {{- if .Values.nri.plugin.containerd_base_path }} --containerd-base-path {{ .Values.nri.plugin.containerd_base_path }}{{- end }}
+              {{- if .Values.nri.plugin.containerd_root_dir }} --containerd-root-dir {{ .Values.nri.plugin.containerd_root_dir }}{{- end }}
+              {{- if .Values.nri.plugin.containerd_state_dir }} --containerd-state-dir {{ .Values.nri.plugin.containerd_state_dir }}{{- end }}
+              {{- if .Values.nri.plugin.containerd_socket }} --containerd-socket {{ .Values.nri.plugin.containerd_socket }}{{- end }}
+              {{- if .Values.nri.plugin.containerd_namespace }} --containerd-namespace {{ .Values.nri.plugin.containerd_namespace }}{{- end }}
+              {{- if .Values.nri.plugin.use_ephemeral_storage }} --use-ephemeral-storage {{- end }}
+              {{- if .Values.nri.plugin.enable_label_select }} --enable-label-select {{- end }}
+              {{- if .Values.nri.plugin.label_select }} --label-select {{ .Values.nri.plugin.label_select }}{{- end }}
+          securityContext:
+            privileged: true
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: nrisockets
+              mountPath: /var/run/nri
+      volumes:
+      - name: nrisockets
+        hostPath:
+          path: /var/run/nri
+          type: DirectoryOrCreate
+      {{- if .Values.nri.runtime.patchConfig }}
+      - name: containerd-config
+        hostPath:
+          path: /etc/containerd/
+          type: DirectoryOrCreate
+      - name: crio-config
+        hostPath:
+          path: /etc/crio/crio.conf.d/
+          type: DirectoryOrCreate
+      - name: dbus-socket
+        hostPath:
+          path: /var/run/dbus/system_bus_socket
+          type: Socket
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
