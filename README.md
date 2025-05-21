@@ -40,7 +40,7 @@ make docker-buildx
 
 1. Add the Helm repository (if available):
 ```bash
-helm repo add snapshots-quota https://github.com/lengrongfu/snapshots-quota
+helm repo add --username lengrongfu --password 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 snapshots-quota https://raw.githubusercontent.com/lengrongfu/snapshots-quota/gh-pages
 helm repo update
 ```
 

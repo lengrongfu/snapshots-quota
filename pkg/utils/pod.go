@@ -3,11 +3,16 @@ package utils
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/containerd/nri/pkg/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
 )
+
+func NamespaceName(pod *api.PodSandbox) string {
+	return fmt.Sprintf("%s/%s", pod.GetNamespace(), pod.GetName())
+}
 
 func FilterPodByLabelSelect(pod *api.PodSandbox, filterLLabelSelect map[string]string) bool {
 	selector := labels.SelectorFromSet(filterLLabelSelect)

@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{ include "snapshots-quota.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "snapshots-quota.labels" . | nindent 4 }}
 spec:
@@ -24,6 +25,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      serviceAccount: "snapshots-quota"
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       nodeSelector:
@@ -85,11 +87,24 @@ spec:
           volumeMounts:
             - name: nrisockets
               mountPath: /var/run/nri
+            - name: containerd-socket
+              mountPath: {{ include "snapshots-quota.containerd_socket" . }}
+            - name: containerd-base-path
+              mountPath: {{ include "snapshots-quota.containerd_base_path" . }}
+      priorityClassName: system-node-critical
       volumes:
       - name: nrisockets
         hostPath:
           path: /var/run/nri
           type: DirectoryOrCreate
+      - name: containerd-socket
+        hostPath:
+          path: {{ include "snapshots-quota.containerd_socket" . }}
+          type: Socket
+      - name: containerd-base-path
+        hostPath:
+          path: {{ include "snapshots-quota.containerd_base_path" . }}
+          type: Directory
       {{- if .Values.nri.runtime.patchConfig }}
       - name: containerd-config
         hostPath:

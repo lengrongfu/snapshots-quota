@@ -49,3 +49,25 @@ Selector labels
 app.kubernetes.io/name: {{ include "snapshots-quota.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
+{{/*
+Define containerd socket path
+*/}}
+{{- define "snapshots-quota.containerd_socket" -}}
+{{- if .Values.nri.plugin.containerd_socket }}
+{{- .Values.nri.plugin.containerd_socket }}
+{{- else }}
+{{- "/run/containerd/containerd.sock" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Define containerd base path
+*/}}
+{{- define "snapshots-quota.containerd_base_path" -}}
+{{- if .Values.nri.plugin.containerd_base_path }}
+{{- .Values.nri.plugin.containerd_base_path }}
+{{- else }}
+{{- "/" }}
+{{- end }}
+{{- end }}

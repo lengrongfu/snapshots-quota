@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -55,6 +56,7 @@ type plugin struct {
 	client                  *containerd.Client
 	containerProjectMapSync sync.RWMutex
 	containerProjectMap     map[string]uint32
+	filterPod               sync.Map
 }
 
 func (p *plugin) PostCreateContainer(ctx context.Context, pod *api.PodSandbox, ctr *api.Container) error {
@@ -64,7 +66,9 @@ func (p *plugin) PostCreateContainer(ctx context.Context, pod *api.PodSandbox, c
 			klog.Warningf("label select map is nil")
 		}
 		if filterLabelSelect != nil && !utils.FilterPodByLabelSelect(pod, filterLabelSelect) {
-			klog.InfoS("pod %s/%s not match label select map %v", pod.Namespace, pod.Name, filterLabelSelect)
+			klog.InfoS("pod not match label select map", "pod",
+				utils.NamespaceName(pod), "pod-label", pod.GetLabels(), "label-select", filterLabelSelect)
+			p.filterPod.Store(utils.NamespaceName(pod), struct{}{})
 			return nil
 		}
 	}
@@ -107,8 +111,13 @@ func (p *plugin) PostStartContainer(ctx context.Context, pod *api.PodSandbox, ct
 		if filterLabelSelect == nil {
 			klog.Warningf("label select map is nil")
 		}
+		if _, ok := p.filterPod.Load(utils.NamespaceName(pod)); ok {
+			klog.Infof("pod %s already filtered", utils.NamespaceName(pod))
+			return nil
+		}
 		if filterLabelSelect != nil && !utils.FilterPodByLabelSelect(pod, filterLabelSelect) {
-			klog.InfoS("pod %s/%s not match label select map %v", pod.Namespace, pod.Name, filterLabelSelect)
+			klog.InfoS("pod not match label select map", "pod",
+				fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "pod-label", pod.GetLabels(), "label-select", filterLabelSelect)
 			return nil
 		}
 	}
@@ -150,8 +159,13 @@ func (p *plugin) RemoveContainer(ctx context.Context, pod *api.PodSandbox, ctr *
 		if filterLabelSelect == nil {
 			klog.Warningf("label select map is nil")
 		}
+		if _, ok := p.filterPod.Load(utils.NamespaceName(pod)); ok {
+			klog.Infof("pod %s already filtered", utils.NamespaceName(pod))
+			return nil
+		}
 		if filterLabelSelect != nil && !utils.FilterPodByLabelSelect(pod, filterLabelSelect) {
-			klog.InfoS("pod %s/%s not match label select map %v", pod.Namespace, pod.Name, filterLabelSelect)
+			klog.InfoS("pod not match label select map", "pod",
+				fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "pod-label", pod.GetLabels(), "label-select", filterLabelSelect)
 			return nil
 		}
 	}
@@ -259,6 +273,7 @@ func start(opts []stub.Option) error {
 		quotaCtl:                qctr,
 		containerProjectMap:     make(map[string]uint32),
 		containerProjectMapSync: sync.RWMutex{},
+		filterPod:               sync.Map{},
 	}
 	closeCtx := make(chan struct{})
 
