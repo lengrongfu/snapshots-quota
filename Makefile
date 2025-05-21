@@ -9,7 +9,7 @@ IMAGE_TAG=latest
 GO_BUILD_FLAGS=CGO_ENABLED=1
 
 # Docker buildx platform
-PLATFORMS=linux/amd64,linux/arm64
+PLATFORMS=linux/amd64
 
 .PHONY: all build clean docker-build docker-push docker-buildx docker-pushx docker-allx
 
