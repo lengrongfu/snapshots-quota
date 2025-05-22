@@ -138,6 +138,7 @@ func (p *plugin) PostStartContainer(ctx context.Context, pod *api.PodSandbox, ct
 	projectId, ok := p.containerProjectMap[ctr.Id]
 	if !ok {
 		klog.Errorf("container project not save")
+		p.containerProjectMapSync.RUnlock()
 		return nil
 	}
 	p.containerProjectMapSync.RUnlock()
