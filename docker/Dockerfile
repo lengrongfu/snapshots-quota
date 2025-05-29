@@ -34,5 +34,7 @@ RUN apt-get update && apt-get install -y \
 # Copy the binary from builder
 COPY --from=builder /app/quota-injector .
 
+RUN chmod +x /app/quota-injector
+
 # Set the entrypoint
 ENTRYPOINT ["/app/quota-injector"]

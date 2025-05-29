@@ -42,19 +42,16 @@ const int Q_XGETQSTAT_PRJQUOTA = QCMD(Q_XGETQSTAT, PRJQUOTA);
 import "C"
 
 import (
-	"context"
-	"fmt"
-	"k8s.io/klog/v2"
 	"os"
 	"path"
 	"path/filepath"
 	"sync"
 	"unsafe"
 
-	"github.com/containerd/log"
 	"github.com/moby/sys/userns"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
+	"k8s.io/klog/v2"
 )
 
 type pquotaState struct {
@@ -148,7 +145,7 @@ func NewControl(basePath string, containerdRoot string) (*Control, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.G(context.TODO()).Infof("baseProjectID is %d, basePath is %s", baseProjectID, basePath)
+	klog.InfoS("baseProjectID", "baseProjectID", baseProjectID, "basePath", basePath)
 	minProjectID := baseProjectID + 1
 
 	//
@@ -182,7 +179,7 @@ func NewControl(basePath string, containerdRoot string) (*Control, error) {
 		return nil, err
 	}
 
-	log.G(context.TODO()).Debugf("NewControl(%s): nextProjectID = %d", basePath, state.nextProjectID)
+	klog.InfoS("NewControl", "backingFsBlockDev", backingFsBlockDev, " nextProjectID", state.nextProjectID)
 	return &q, nil
 }
 
@@ -198,8 +195,7 @@ func (q *Control) SetQuotaByProject(targetPath string, quota Quota, projectID ui
 	if err != nil {
 		return err
 	}
-	fmt.Printf("SetQuota(%s, %d): projectID=%d\n", targetPath, quota.Size, projectID)
-	log.G(context.TODO()).Debugf("SetQuota(%s, %d): projectID=%d", targetPath, quota.Size, projectID)
+	klog.InfoS("SetQuotaByProject", "targetPath", targetPath, "quotaSize", quota.Size, "projectID", projectID)
 	return nil
 }
 
@@ -236,18 +232,18 @@ func (q *Control) SetProject(targetPath string) (uint32, error) {
 		q.quotas[targetPath] = projectID
 		q.Unlock()
 	}
-	klog.V(4).Infof("SetProject(%s): projectID=%d", targetPath, projectID)
+	klog.Infof("SetProject(%s): projectID=%d", targetPath, projectID)
 	return projectID, nil
 }
 
 func (q *Control) SetProjectByProject(targetPath string, projectID uint32) error {
-	klog.V(4).Infof("SetProjectByProject(%s): projectID=%d", targetPath, projectID)
+	klog.Infof("SetProjectByProject(%s): projectID=%d", targetPath, projectID)
 	err := setProjectID(targetPath, projectID)
 	return err
 }
 
 func (q *Control) SetProjectQuota(quota Quota, projectID uint32) error {
-	klog.V(4).Infof("SetProjectQuota(%d): projectID=%d", quota.Size, projectID)
+	klog.Infof("SetProjectQuota(%d): projectID=%d", quota.Size, projectID)
 	return setProjectQuota(q.backingFsBlockDev, projectID, quota)
 }
 
@@ -282,7 +278,7 @@ func (q *Control) SetQuota(targetPath string, quota Quota) error {
 	//
 	// set the quota limit for the container's project id
 	//
-	klog.V(4).Infof("SetQuota(%s, %d): projectID=%d", targetPath, quota.Size, projectID)
+	klog.Infof("SetQuota(%s, %d): projectID=%d", targetPath, quota.Size, projectID)
 	return setProjectQuota(q.backingFsBlockDev, projectID, quota)
 }
 

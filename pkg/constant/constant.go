@@ -18,3 +18,7 @@ const (
 	// DefaultContainerdRootDir is the default root directory for containerd
 	DefaultContainerdRootDir = "/var/lib/containerd"
 )
+
+const (
+	Mib = 10 * 1024 * 1024
+)

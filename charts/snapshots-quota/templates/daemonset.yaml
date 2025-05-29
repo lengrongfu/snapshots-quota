@@ -64,22 +64,50 @@ spec:
                   apiVersion: v1
                   fieldPath: spec.nodeName
           command:
-            - /bin/sh
-            - -c
             - /app/quota-injector
-              {{- if .Values.nri.plugin.index }} --idx {{ .Values.nri.plugin.index }}{{- end }}
-              {{- if .Values.nri.plugin.name }} --name {{ .Values.nri.plugin.name }}{{- end }}
-              {{- if .Values.nri.plugin.quota }} --quota {{ .Values.nri.plugin.quota}}{{- end }}
-              {{- if .Values.nri.plugin.containerd_base_path }} --containerd-base-path {{ .Values.nri.plugin.containerd_base_path }}{{- end }}
-              {{- if .Values.nri.plugin.containerd_root_dir }} --containerd-root-dir {{ .Values.nri.plugin.containerd_root_dir }}{{- end }}
-              {{- if .Values.nri.plugin.containerd_state_dir }} --containerd-state-dir {{ .Values.nri.plugin.containerd_state_dir }}{{- end }}
-              {{- if .Values.nri.plugin.containerd_socket }} --containerd-socket {{ .Values.nri.plugin.containerd_socket }}{{- end }}
-              {{- if .Values.nri.plugin.containerd_namespace }} --containerd-namespace {{ .Values.nri.plugin.containerd_namespace }}{{- end }}
-              {{- if .Values.nri.plugin.use_ephemeral_storage }} --use-ephemeral-storage {{- end }}
-              {{- if .Values.nri.plugin.enable_label_select }} --enable-label-select {{- end }}
-              {{- if .Values.nri.plugin.label_select }} --label-select {{ .Values.nri.plugin.label_select }}{{- end }}
+            {{- if .Values.nri.plugin.index }}
+            - --idx={{ .Values.nri.plugin.index }}
+            {{- end }}
+            {{- if .Values.nri.plugin.name }}
+            - --name={{ .Values.nri.plugin.name }}
+            {{- end }}
+            {{- if .Values.nri.plugin.quota }}
+            - --quota={{ .Values.nri.plugin.quota}}
+            {{- end }}
+            {{- if .Values.nri.plugin.containerd_container_base_path }}
+            - --containerd-base-path={{ .Values.nri.plugin.containerd_container_base_path }}
+            {{- end }}
+            {{- if .Values.nri.plugin.containerd_root_dir }}
+            - --containerd-root-dir={{ .Values.nri.plugin.containerd_root_dir }}
+            {{- end }}
+            {{- if .Values.nri.plugin.containerd_state_dir }}
+            - --containerd-state-dir={{ .Values.nri.plugin.containerd_state_dir }}
+            {{- end }}
+            {{- if .Values.nri.plugin.containerd_socket }}
+            - --containerd-socket={{ .Values.nri.plugin.containerd_socket }}
+            {{- end }}
+            {{- if .Values.nri.plugin.containerd_namespace }}
+            - --containerd-namespace={{ .Values.nri.plugin.containerd_namespace }}
+            {{- end }}
+            {{- if .Values.nri.plugin.use_ephemeral_storage }}
+            - --use-ephemeral-storage
+            {{- end }}
+            {{- if .Values.nri.plugin.enable_label_select }}
+            - --enable-label-select
+            {{- end }}
+            {{- if .Values.nri.plugin.skip_rootfs }}
+            - --skip-rootfs
+            {{- end }}
+            {{- if and .Values.nri.plugin.customer_resource (ne .Values.nri.plugin.customer_resource "") }}
+            - --customer-resource={{ .Values.nri.plugin.customer_resource }}
+            {{- end }}
+            {{- if .Values.nri.plugin.label_select }}
+            - --label-select={{ .Values.nri.plugin.label_select }}
+            {{- end }}
           securityContext:
             privileged: true
+            seLinuxOptions:
+              level: s0
           image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           resources:
@@ -90,7 +118,11 @@ spec:
             - name: containerd-socket
               mountPath: {{ include "snapshots-quota.containerd_socket" . }}
             - name: containerd-base-path
-              mountPath: {{ include "snapshots-quota.containerd_base_path" . }}
+              mountPath: {{ include "snapshots-quota.containerd_container_base_path" . }}
+            - name: containerd-root
+              mountPath: {{ include "snapshots-quota.containerd_root_dir" . }}
+            - name: containerd-state
+              mountPath: {{ include "snapshots-quota.containerd_state_dir" . }}
       priorityClassName: system-node-critical
       volumes:
       - name: nrisockets
@@ -103,7 +135,15 @@ spec:
           type: Socket
       - name: containerd-base-path
         hostPath:
-          path: {{ include "snapshots-quota.containerd_base_path" . }}
+          path: {{ include "snapshots-quota.containerd_host_base_path" . }}
+          type: Directory
+      - name: containerd-root
+        hostPath:
+          path: {{ include "snapshots-quota.containerd_root_dir" . }}
+          type: Directory
+      - name: containerd-state
+        hostPath:
+          path: {{ include "snapshots-quota.containerd_state_dir" . }}
           type: Directory
       {{- if .Values.nri.runtime.patchConfig }}
       - name: containerd-config

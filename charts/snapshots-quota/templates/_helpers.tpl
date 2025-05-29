@@ -62,12 +62,46 @@ Define containerd socket path
 {{- end }}
 
 {{/*
-Define containerd base path
+Define containerd host base path
 */}}
-{{- define "snapshots-quota.containerd_base_path" -}}
-{{- if .Values.nri.plugin.containerd_base_path }}
-{{- .Values.nri.plugin.containerd_base_path }}
+{{- define "snapshots-quota.containerd_host_base_path" -}}
+{{- if .Values.nri.plugin.containerd_host_base_path }}
+{{- .Values.nri.plugin.containerd_host_base_path }}
 {{- else }}
 {{- "/" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Define containerd container base path
+*/}}
+{{- define "snapshots-quota.containerd_container_base_path" -}}
+{{- if .Values.nri.plugin.containerd_container_base_path }}
+{{- .Values.nri.plugin.containerd_container_base_path }}
+{{- else }}
+{{- "/data" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Define containerd root dir
+*/}}
+{{- define "snapshots-quota.containerd_root_dir" -}}
+{{- if .Values.nri.plugin.containerd_root_dir }}
+{{- .Values.nri.plugin.containerd_root_dir }}
+{{- else }}
+{{- "/var/lib/containerd" }}
+{{- end }}
+{{- end }}
+
+
+{{/*
+Define containerd state dir
+*/}}
+{{- define "snapshots-quota.containerd_state_dir" -}}
+{{- if .Values.nri.plugin.containerd_state_dir }}
+{{- .Values.nri.plugin.containerd_state_dir }}
+{{- else }}
+{{- "/run/containerd" }}
 {{- end }}
 {{- end }}

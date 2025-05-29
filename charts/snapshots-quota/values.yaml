@@ -65,15 +65,18 @@ nri:
   plugin:
     index: "99"
     name: snapshots-quota
-#    quota: 1073741824 #this is global quota
-#    containerd_base_path: / # this is the default value
-#    containerd_root_dir: /var/lib/containerd # this is the default value
-#    containerd_state_dir: /run/containerd # this is the default value
-#    containerd_socket: /run/containerd/containerd.sock # this is the default value
-#    containerd_namespace: k8s.io # this is the default value
-#    use_ephemeral_storage: false # use pod resource ephemeral-storage to set quota size
-#    enable_label_select: true # enable label select, only support match label pod
-#    label_select: "app=zestu"
+    quota: '1073741824' #this is global quota, default is 1Gi
+    containerd_host_base_path: / # this is the default value
+    containerd_container_base_path: /data # this is the default value
+    containerd_root_dir: /var/lib/containerd # this is the default value
+    containerd_state_dir: /run/containerd # this is the default value
+    containerd_socket: /run/containerd/containerd.sock # this is the default value
+    containerd_namespace: k8s.io # this is the default value
+    use_ephemeral_storage: false # use pod resource ephemeral-storage to set quota size
+    enable_label_select: true # enable label select, only support match label pod
+    label_select: "app=zestu"
+    customer_resource: "disk.io/size"
+    skip_rootfs: true
   runtime:
     patchConfig: false
     config:
