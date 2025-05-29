@@ -1,5 +1,5 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: snapshots-quota
   namespace: {{ .Release.Namespace }}
@@ -7,7 +7,7 @@ metadata:
     {{- include "snapshots-quota.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: snapshots-quota
 subjects:
   - kind: ServiceAccount

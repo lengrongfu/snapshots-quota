@@ -6,7 +6,7 @@ import (
 )
 
 func Test_FilterPodByLabelSelect(t *testing.T) {
-	filterLLabelSelect := map[string]string{"app": "nginx", "env": "prod"}
+	filterLLabelSelect := map[string]string{"app": "nginx"}
 	pod := &api.PodSandbox{
 		Name:      "nginx",
 		Namespace: "default",

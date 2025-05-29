@@ -47,6 +47,10 @@ var (
 	enableLabelSelect bool
 	// filterLabelSelect is the label select map
 	filterLabelSelect = make(utils.FlagMap)
+	// skipRootfsPrjquota when don't need set rootfs prjquota so can skip.
+	skipRootfsPrjquota bool
+	// customerResource
+	customerResource string
 )
 
 // our injector plugin
@@ -102,7 +106,12 @@ func (p *plugin) PostCreateContainer(ctx context.Context, pod *api.PodSandbox, c
 	p.containerProjectMap[ctr.Id] = upperdirProject
 	p.containerProjectMapSync.Unlock()
 
-	return p.quotaCtl.SetProjectByProject(filepath.Join(upperDir, "work"), upperdirProject)
+	err = p.quotaCtl.SetProjectByProject(filepath.Join(upperDir, "work"), upperdirProject)
+	if err != nil {
+		klog.Errorf("set project by target %s error %s", upperDir, err)
+		return err
+	}
+	return nil
 }
 
 func (p *plugin) PostStartContainer(ctx context.Context, pod *api.PodSandbox, ctr *api.Container) error {
@@ -121,12 +130,19 @@ func (p *plugin) PostStartContainer(ctx context.Context, pod *api.PodSandbox, ct
 			return nil
 		}
 	}
-	rootfs := filepath.Join(containerdStateDir, "io.containerd.runtime.v2.task", containerdNamespace, ctr.Id, "rootfs")
 	var size = quotaSize
 	if useEphemeralStorage {
-		ephemeralStorage, err := utils.GetEphemeralStorage(ctx, pod, ctr)
+		ephemeralStorage, err := utils.GetResource(ctx, pod, ctr, "ephemeral-storage")
 		if err != nil {
 			klog.Errorf("get ephemeral-storage error, fallback to use global quota size: %d, %s", quotaSize, err)
+		} else {
+			size = ephemeralStorage - constant.Mib
+		}
+	}
+	if customerResource != "" {
+		ephemeralStorage, err := utils.GetResource(ctx, pod, ctr, customerResource)
+		if err != nil {
+			klog.Errorf("get customer-resource error, fallback to use global quota size: %d, %s", quotaSize, err)
 		} else {
 			size = ephemeralStorage
 		}
@@ -142,12 +158,15 @@ func (p *plugin) PostStartContainer(ctx context.Context, pod *api.PodSandbox, ct
 		return nil
 	}
 	p.containerProjectMapSync.RUnlock()
-	err := p.quotaCtl.SetProjectByProject(rootfs, projectId)
-	if err != nil {
-		klog.Errorf("set overlayfs quota project error: %s", err)
-		return err
+	if !skipRootfsPrjquota {
+		rootfs := filepath.Join(containerdStateDir, "io.containerd.runtime.v2.task", containerdNamespace, ctr.Id, "rootfs")
+		err := p.quotaCtl.SetProjectByProject(rootfs, projectId)
+		if err != nil {
+			klog.Errorf("set overlayfs quota project error: %s", err)
+			return err
+		}
 	}
-	if err = p.quotaCtl.SetProjectQuota(q, projectId); err != nil {
+	if err := p.quotaCtl.SetProjectQuota(q, projectId); err != nil {
 		klog.Errorf("set project %d quota error %s", projectId, err)
 		return err
 	}
@@ -206,6 +225,8 @@ func parseFlag() {
 	flag.BoolVar(&useEphemeralStorage, "use-ephemeral-storage", false, "use pod resource ephemeral-storage to set quota size")
 	flag.BoolVar(&enableLabelSelect, "enable-label-select", true, "enable label select")
 	flag.Var(&filterLabelSelect, "label-select", "label select map, key=value,key1=value1")
+	flag.BoolVar(&skipRootfsPrjquota, "skip-rootfs", true, "when don't need set rootfs prjquota, so can skip")
+	flag.StringVar(&customerResource, "customer-resource", "", "customer resource to define disk")
 	flag.Parse()
 }
 
@@ -221,6 +242,8 @@ func printFlag() {
 	klog.InfoS("use ephemeral storage", "use-ephemeral-storage", useEphemeralStorage)
 	klog.InfoS("enable label select", "enable-label-select", enableLabelSelect)
 	klog.InfoS("label select map", "label-select", filterLabelSelect)
+	klog.InfoS("skip rootfs", "skip-rootfs", skipRootfsPrjquota)
+	klog.InfoS("customer-resource", "customer-resource", customerResource)
 }
 
 func main() {
